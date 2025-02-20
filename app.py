@@ -44,13 +44,25 @@ def show_expense_tracker():
             if submitted:
                 add_expense(date.strftime("%Y-%m-%d"), amount, category, note)
                 st.success("Expense added successfully!")
+                st.rerun()
     
     with col2:
         # Display expenses
         expenses = get_expenses()
         if not expenses.empty:
             st.subheader("Recent Expenses")
-            st.dataframe(expenses)
+            
+            # Create a dataframe with a delete button column
+            for idx, row in expenses.iterrows():
+                cols = st.columns([2, 2, 2, 3, 1])
+                cols[0].write(row['date'])
+                cols[1].write(f"${row['amount']:.2f}")
+                cols[2].write(row['category'])
+                cols[3].write(row['note'])
+                if cols[4].button('🗑️', key=f"del_{idx}_{row['date']}_{row['amount']}"):
+                    delete_expense(row['date'], row['amount'], row['category'], row['note'])
+                    st.success("Expense deleted!")
+                    st.rerun()
             
             # Create pie chart of expenses by category
             fig = px.pie(expenses, values='amount', names='category', 
