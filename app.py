@@ -80,29 +80,31 @@ def show_investment_portfolio():
     for idx, stock in enumerate(stocks):
         with cols[idx]:
             try:
-                # Download data with progress=False to avoid unnecessary output
-                data = yf.download(stock, 
-                                 start="2023-01-01", 
-                                 end=datetime.now(), 
-                                 progress=False)
+                # Use a shorter date range and ensure valid dates
+                end_date = datetime.now()
+                start_date = end_date - pd.Timedelta(days=30)  # Last 30 days
                 
-                if len(data) > 0:  # Check if we have data
-                    # Create figure using graph_objects
+                data = yf.download(
+                    tickers=stock,
+                    start=start_date.strftime('%Y-%m-%d'),
+                    end=end_date.strftime('%Y-%m-%d'),
+                    progress=False,
+                    interval='1d'
+                )
+                
+                if len(data) > 0:
                     fig = go.Figure()
                     fig.add_trace(
                         go.Scatter(
                             x=data.index,
-                            y=data['Close'].values,  # Explicitly get values
+                            y=data['Close'],
                             mode='lines',
                             name=stock
                         )
                     )
                     fig.update_layout(
-                        title=f'{stock} Stock Price',
-                        xaxis_title="Date",
-                        yaxis_title="Price (USD)",
-                        height=400,
-                        width=None  # Let Streamlit handle the width
+                        title=f'{stock} Last 30 Days',
+                        height=400
                     )
                     st.plotly_chart(fig, use_container_width=True)
                 else:
