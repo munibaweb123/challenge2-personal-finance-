@@ -80,19 +80,16 @@ def show_investment_portfolio():
     for idx, stock in enumerate(stocks):
         with cols[idx]:
             try:
-                # Use a shorter date range and ensure valid dates
-                end_date = datetime.now()
-                start_date = end_date - pd.Timedelta(days=30)  # Last 30 days
-                
-                data = yf.download(
-                    tickers=stock,
-                    start=start_date.strftime('%Y-%m-%d'),
-                    end=end_date.strftime('%Y-%m-%d'),
-                    progress=False,
-                    interval='1d'
+                # Create a Ticker object
+                ticker = yf.Ticker(stock)
+                # Get historical data
+                data = ticker.history(
+                    period="1mo",  # Get 1 month of data
+                    interval="1d",  # Daily intervals
+                    proxy=None
                 )
                 
-                if len(data) > 0:
+                if not data.empty:
                     fig = go.Figure()
                     fig.add_trace(
                         go.Scatter(
@@ -103,7 +100,7 @@ def show_investment_portfolio():
                         )
                     )
                     fig.update_layout(
-                        title=f'{stock} Last 30 Days',
+                        title=f'{stock} Last Month',
                         height=400
                     )
                     st.plotly_chart(fig, use_container_width=True)
