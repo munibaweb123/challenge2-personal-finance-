@@ -69,10 +69,11 @@ def show_investment_portfolio():
         with cols[idx]:
             try:
                 data = yf.download(stock, start="2023-01-01", end=datetime.now(), progress=False)
-                # Handle both single-symbol and multi-symbol cases
-                close_data = data['Close'] if 'Close' in data.columns else data[('Close', stock)]
-                fig = px.line(x=data.index, y=close_data,
-                            title=f'{stock} Stock Price')
+                # Create figure using graph_objects for more control
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(x=data.index, y=data['Close'],
+                                       mode='lines', name=stock))
+                fig.update_layout(title=f'{stock} Stock Price')
                 st.plotly_chart(fig, use_container_width=True)
             except Exception as e:
                 st.error(f"Error fetching data for {stock}: {str(e)}")
