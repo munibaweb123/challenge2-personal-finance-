@@ -42,4 +42,11 @@ def delete_expense(date, amount, category, note):
               (date, amount, category, note))
     
     conn.commit()
+    conn.close()
+
+def clear_expenses():
+    conn = sqlite3.connect('finance.db')
+    c = conn.cursor()
+    c.execute('DELETE FROM expenses')
+    conn.commit()
     conn.close() 
