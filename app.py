@@ -80,16 +80,22 @@ def show_investment_portfolio():
     for idx, stock in enumerate(stocks):
         with cols[idx]:
             try:
-                # Create a Ticker object
+                # Create a Ticker object and show loading state
+                st.write(f"Loading {stock} data...")
                 ticker = yf.Ticker(stock)
-                # Get historical data
+                
+                # Get historical data with explicit parameters
                 data = ticker.history(
-                    period="1mo",  # Get 1 month of data
-                    interval="1d",  # Daily intervals
+                    period="1mo",
+                    interval="1d",
                     proxy=None
                 )
                 
-                if not data.empty:
+                # Debug information
+                st.write(f"Data shape: {data.shape}")
+                
+                if len(data) > 0:
+                    # Create figure
                     fig = go.Figure()
                     fig.add_trace(
                         go.Scatter(
@@ -105,9 +111,11 @@ def show_investment_portfolio():
                     )
                     st.plotly_chart(fig, use_container_width=True)
                 else:
-                    st.warning(f"No data available for {stock}")
+                    st.warning(f"No data points found for {stock}")
+                    st.write("Available columns:", data.columns.tolist())
             except Exception as e:
-                st.error(f"Error fetching data for {stock}: {str(e)}")
+                st.error(f"Detailed error for {stock}: {str(e)}")
+                st.write("Error type:", type(e).__name__)
 
 def show_budget_planning():
     st.header("Budget Planning")
