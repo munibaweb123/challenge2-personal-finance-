@@ -80,13 +80,33 @@ def show_investment_portfolio():
     for idx, stock in enumerate(stocks):
         with cols[idx]:
             try:
-                data = yf.download(stock, start="2023-01-01", end=datetime.now(), progress=False)
-                # Create figure using graph_objects for more control
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(x=data.index, y=data['Close'],
-                                       mode='lines', name=stock))
-                fig.update_layout(title=f'{stock} Stock Price')
-                st.plotly_chart(fig, use_container_width=True)
+                # Download data with progress=False to avoid unnecessary output
+                data = yf.download(stock, 
+                                 start="2023-01-01", 
+                                 end=datetime.now(), 
+                                 progress=False)
+                
+                if len(data) > 0:  # Check if we have data
+                    # Create figure using graph_objects
+                    fig = go.Figure()
+                    fig.add_trace(
+                        go.Scatter(
+                            x=data.index,
+                            y=data['Close'].values,  # Explicitly get values
+                            mode='lines',
+                            name=stock
+                        )
+                    )
+                    fig.update_layout(
+                        title=f'{stock} Stock Price',
+                        xaxis_title="Date",
+                        yaxis_title="Price (USD)",
+                        height=400,
+                        width=None  # Let Streamlit handle the width
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.warning(f"No data available for {stock}")
             except Exception as e:
                 st.error(f"Error fetching data for {stock}: {str(e)}")
 
