@@ -50,23 +50,7 @@ def show_expense_tracker():
         expenses = get_expenses()
         if not expenses.empty:
             st.subheader("Recent Expenses")
-            
-            # Add delete buttons to each row
-            for index, row in expenses.iterrows():
-                col1, col2, col3, col4, col5 = st.columns([2,2,2,3,1])
-                with col1:
-                    st.write(row['date'])
-                with col2:
-                    st.write(f"${row['amount']:.2f}")
-                with col3:
-                    st.write(row['category'])
-                with col4:
-                    st.write(row['note'])
-                with col5:
-                    if st.button('🗑️', key=f"delete_{index}"):
-                        delete_expense(row['date'], row['amount'], 
-                                    row['category'], row['note'])
-                        st.rerun()
+            st.dataframe(expenses)
             
             # Create pie chart of expenses by category
             fig = px.pie(expenses, values='amount', names='category', 
@@ -84,8 +68,10 @@ def show_investment_portfolio():
     for idx, stock in enumerate(stocks):
         with cols[idx]:
             try:
-                data = yf.download(stock, start="2023-01-01", end=datetime.now())
-                fig = px.line(data, x=data.index, y=data[('Close', stock)],
+                data = yf.download(stock, start="2023-01-01", end=datetime.now(), progress=False)
+                # Handle both single-symbol and multi-symbol cases
+                close_data = data['Close'] if 'Close' in data.columns else data[('Close', stock)]
+                fig = px.line(x=data.index, y=close_data,
                             title=f'{stock} Stock Price')
                 st.plotly_chart(fig, use_container_width=True)
             except Exception as e:
