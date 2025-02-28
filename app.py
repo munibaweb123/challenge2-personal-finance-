@@ -102,19 +102,17 @@ def show_expense_tracker():
 def show_investment_portfolio():
     st.header("📈 Investment Portfolio")
     
-    # Sample stock portfolio
     stocks = ['AAPL', 'GOOGL', 'MSFT']
     
-    # Fetch real-time stock data
     cols = st.columns(len(stocks))
     
     for idx, stock in enumerate(stocks):
         with cols[idx]:
             try:
                 st.write(f"Fetching data for {stock}...")  # ✅ Debugging message
-                ticker = yf.Ticker(stock)
                 
-                data = ticker.history(period="1mo", interval="1d")
+                # ✅ Alternative Fix: Use `yfinance.download()` instead
+                data = yf.download(stock, period="3mo", interval="1d")
 
                 # ✅ DEBUG: Print the actual returned data
                 st.write(f"📊 Raw Data for {stock}:")
@@ -125,7 +123,7 @@ def show_investment_portfolio():
 
                     fig = go.Figure()
                     fig.add_trace(go.Scatter(x=data.index, y=data["Close"], mode='lines', name=stock))
-                    fig.update_layout(title=f'{stock} Last Month', height=400)
+                    fig.update_layout(title=f'{stock} Last 3 Months', height=400)
                     st.plotly_chart(fig, use_container_width=True)
                 else:
                     st.warning(f"⚠ No valid closing price data found for {stock}.")
@@ -134,7 +132,6 @@ def show_investment_portfolio():
             except Exception as e:
                 st.error(f"❌ Error fetching data for {stock}: {str(e)}")
                 st.write("Error Type:", type(e).__name__)  # ✅ Show error type
-
 
 
 
