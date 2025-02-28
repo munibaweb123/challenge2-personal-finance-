@@ -6,6 +6,7 @@ import sqlite3
 import yfinance as yf
 from datetime import datetime
 from database import init_db, add_expense, get_expenses, delete_expense, clear_expenses
+import requests
 
 # Initialize the database
 init_db()
@@ -99,6 +100,24 @@ def show_expense_tracker():
             fig = px.pie(expenses, values='amount', names='category', title='Expenses by Category')
             st.plotly_chart(fig)
 
+import requests
+
+def fetch_stock_price(symbol):
+    """Fetch stock data from Alpha Vantage"""
+    api_key = "RVO6XQ3L05Z09UN8"  # 🔹 Replace with your API key
+    url = f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&apikey={api_key}"
+    response = requests.get(url)
+    data = response.json()
+
+    if "Time Series (Daily)" in data:
+        df = pd.DataFrame(data["Time Series (Daily)"]).T
+        df.index = pd.to_datetime(df.index)
+        df = df.sort_index()
+        df = df.rename(columns={"4. close": "Close"})  # 🔹 Standardize column name
+        return df
+    else:
+        return None
+
 def show_investment_portfolio():
     st.header("📈 Investment Portfolio")
     
@@ -108,30 +127,17 @@ def show_investment_portfolio():
     
     for idx, stock in enumerate(stocks):
         with cols[idx]:
-            try:
-                st.write(f"Fetching data for {stock}...")  # ✅ Debugging message
-                
-                # ✅ Alternative Fix: Use `yfinance.download()` instead
-                data = yf.download(stock, period="3mo", interval="1d")
+            st.write(f"Fetching data for {stock}...")
+            data = fetch_stock_price(stock)
 
-                # ✅ DEBUG: Print the actual returned data
-                st.write(f"📊 Raw Data for {stock}:")
-                st.write(data)
-
-                if "Close" in data.columns and not data["Close"].dropna().empty:
-                    st.write(f"✅ Data Found for {stock}: {data.shape}")  # ✅ Debugging output
-
-                    fig = go.Figure()
-                    fig.add_trace(go.Scatter(x=data.index, y=data["Close"], mode='lines', name=stock))
-                    fig.update_layout(title=f'{stock} Last 3 Months', height=400)
-                    st.plotly_chart(fig, use_container_width=True)
-                else:
-                    st.warning(f"⚠ No valid closing price data found for {stock}.")
-                    st.write("✅ Debug Info: Available columns:", data.columns.tolist())  # ✅ Debugging
-
-            except Exception as e:
-                st.error(f"❌ Error fetching data for {stock}: {str(e)}")
-                st.write("Error Type:", type(e).__name__)  # ✅ Show error type
+            if data is not None and "Close" in data.columns:
+                st.write(f"✅ Data Found for {stock}: {data.shape}")
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(x=data.index, y=data["Close"], mode='lines', name=stock))
+                fig.update_layout(title=f'{stock} Last Month', height=400)
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.warning(f"⚠ No valid closing price data found for {stock}.")
 
 
 
