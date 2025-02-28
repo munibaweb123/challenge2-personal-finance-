@@ -116,7 +116,10 @@ def show_investment_portfolio():
                 
                 data = ticker.history(period="1mo", interval="1d")
 
-                # ✅ FIX: Ensure "Close" column exists before checking for empty data
+                # ✅ DEBUG: Print the actual returned data
+                st.write(f"📊 Raw Data for {stock}:")
+                st.write(data)
+
                 if "Close" in data.columns and not data["Close"].dropna().empty:
                     st.write(f"✅ Data Found for {stock}: {data.shape}")  # ✅ Debugging output
 
@@ -131,6 +134,7 @@ def show_investment_portfolio():
             except Exception as e:
                 st.error(f"❌ Error fetching data for {stock}: {str(e)}")
                 st.write("Error Type:", type(e).__name__)  # ✅ Show error type
+
 
 
 
