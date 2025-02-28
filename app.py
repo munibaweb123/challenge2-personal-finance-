@@ -2,11 +2,10 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from datetime import datetime
-import yfinance as yf
-import numpy as np
-from database import init_db, add_expense, get_expenses, delete_expense
 import sqlite3
+import yfinance as yf
+from datetime import datetime
+from database import init_db, add_expense, get_expenses, delete_expense, clear_expenses
 
 # Initialize the database
 init_db()
@@ -27,50 +26,81 @@ def main():
         show_budget_planning()
 
 def show_expense_tracker():
-    st.header("Expense Tracker")
-    
+    st.header("📊 Expense Tracker")
+
     col1, col2 = st.columns(2)
-    
+
     with col1:
-        # Add expense form
+        # 🔴 Button to Clear All Expenses
+        if st.button("❌ Clear All Expenses"):
+            clear_expenses()  # Calls function from database.py
+            st.success("All expenses deleted successfully!")
+            st.rerun()
+
+        # 📂 File Upload Section
+        uploaded_file = st.file_uploader("Upload CSV or Excel", type=["csv", "xlsx"])
+        
+        if uploaded_file is not None:
+            try:
+                # Read CSV or Excel file
+                if uploaded_file.name.endswith(".csv"):
+                    df = pd.read_csv(uploaded_file, encoding="utf-8", sep=",")
+                else:
+                    df = pd.read_excel(uploaded_file)
+
+                # 🔹 Normalize column names (remove spaces & convert to lowercase)
+                df.columns = df.columns.str.strip().str.lower()
+
+                # 🔹 Convert "date" column to string format
+                if "date" in df.columns:
+                    df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
+
+                # ✅ Remove duplicates before inserting into the database
+                df = df.drop_duplicates()
+
+                # 🔍 Show preview of uploaded data
+                st.subheader("Uploaded Data Preview")
+                st.dataframe(df)
+
+                # 🔹 Insert expenses into the database
+                for _, row in df.iterrows():
+                    add_expense(row["date"], row["amount"], row["category"], row["note"])
+
+                st.success("Expenses uploaded successfully!")
+                st.rerun()
+
+            except Exception as e:
+                st.error(f"Error processing file: {e}")
+
+        # 🔹 Manual Expense Entry
         with st.form("expense_form"):
             amount = st.number_input("Amount", min_value=0.0)
-            category = st.selectbox("Category", 
-                ["Food", "Transport", "Entertainment", "Bills", "Shopping", "Other"])
+            category = st.selectbox("Category", ["Food", "Transport", "Entertainment", "Bills", "Shopping", "Other"])
             date = st.date_input("Date")
             note = st.text_input("Note")
             submitted = st.form_submit_button("Add Expense")
-            
+
             if submitted:
                 add_expense(date.strftime("%Y-%m-%d"), amount, category, note)
                 st.success("Expense added successfully!")
                 st.rerun()
-    
+
     with col2:
-        # Display expenses
+        # 🔍 Display Existing Expenses
         expenses = get_expenses()
-        if not expenses.empty:
+        
+        if expenses.empty:
+            st.info("No expenses found. Add new expenses or upload a file.")
+        else:
             st.subheader("Recent Expenses")
-            
-            # Create a dataframe with a delete button column
-            for idx, row in expenses.iterrows():
-                cols = st.columns([2, 2, 2, 3, 1])
-                cols[0].write(row['date'])
-                cols[1].write(f"${row['amount']:.2f}")
-                cols[2].write(row['category'])
-                cols[3].write(row['note'])
-                if cols[4].button('🗑️', key=f"del_{idx}_{row['date']}_{row['amount']}"):
-                    delete_expense(row['date'], row['amount'], row['category'], row['note'])
-                    st.success("Expense deleted!")
-                    st.rerun()
-            
-            # Create pie chart of expenses by category
-            fig = px.pie(expenses, values='amount', names='category', 
-                        title='Expenses by Category')
+            st.dataframe(expenses)  # Display as DataFrame
+
+            # 📊 Pie Chart for Category-wise Expenses
+            fig = px.pie(expenses, values='amount', names='category', title='Expenses by Category')
             st.plotly_chart(fig)
 
 def show_investment_portfolio():
-    st.header("Investment Portfolio")
+    st.header("📈 Investment Portfolio")
     
     # Sample stock portfolio
     stocks = ['AAPL', 'GOOGL', 'MSFT']
@@ -80,45 +110,23 @@ def show_investment_portfolio():
     for idx, stock in enumerate(stocks):
         with cols[idx]:
             try:
-                # Create a Ticker object and show loading state
                 st.write(f"Loading {stock} data...")
                 ticker = yf.Ticker(stock)
                 
-                # Get historical data with explicit parameters
-                data = ticker.history(
-                    period="1mo",
-                    interval="1d",
-                    proxy=None
-                )
-                
-                # Debug information
-                st.write(f"Data shape: {data.shape}")
-                
-                if len(data) > 0:
-                    # Create figure
+                data = ticker.history(period="1mo", interval="1d", proxy=None)
+
+                if not data.empty:
                     fig = go.Figure()
-                    fig.add_trace(
-                        go.Scatter(
-                            x=data.index,
-                            y=data['Close'],
-                            mode='lines',
-                            name=stock
-                        )
-                    )
-                    fig.update_layout(
-                        title=f'{stock} Last Month',
-                        height=400
-                    )
+                    fig.add_trace(go.Scatter(x=data.index, y=data['Close'], mode='lines', name=stock))
+                    fig.update_layout(title=f'{stock} Last Month', height=400)
                     st.plotly_chart(fig, use_container_width=True)
                 else:
-                    st.warning(f"No data points found for {stock}")
-                    st.write("Available columns:", data.columns.tolist())
+                    st.warning(f"No data found for {stock}")
             except Exception as e:
-                st.error(f"Detailed error for {stock}: {str(e)}")
-                st.write("Error type:", type(e).__name__)
+                st.error(f"Error for {stock}: {str(e)}")
 
 def show_budget_planning():
-    st.header("Budget Planning")
+    st.header("📊 Budget Planning")
     
     col1, col2 = st.columns(2)
     
@@ -134,8 +142,7 @@ def show_budget_planning():
     
     with col2:
         # Display budget breakdown
-        fig = go.Figure(data=[go.Pie(labels=['Needs', 'Wants', 'Savings'],
-                                    values=[needs, wants, savings])])
+        fig = go.Figure(data=[go.Pie(labels=['Needs', 'Wants', 'Savings'], values=[needs, wants, savings])])
         fig.update_layout(title="Budget Breakdown")
         st.plotly_chart(fig)
         
